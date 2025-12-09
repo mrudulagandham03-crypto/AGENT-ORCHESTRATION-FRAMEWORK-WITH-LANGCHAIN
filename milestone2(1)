@@ -1,84 +1,104 @@
-
-# tools.py
-
-from langchain_core.tools import Tool
-
-# Tool 1: Calculator
-def calculator(expression: str):
-    try:
-        return str(eval(expression))   # demo only
-    except Exception:
-        return "Invalid Math Expression"
-
-calculator_tool = Tool(
-    name="calculator",
-    func=calculator,
-    description="Use this tool to calculate expressions like '23+45'."
-)
-
-# Add more tools if needed
-tools = [calculator_tool]
-# agent.py
-
 import os
 from dotenv import load_dotenv
 
+from langchain_core.tools import Tool
+
+def calculator(expression: str):
+    try:
+        return str(eval(expression))
+    except Exception:
+        return "Invalid Math Expression"
+
+
+def weather(city: str):
+    """
+    Simple fake weather response.
+    Replace with real API if needed.
+    """
+    sample = {
+        "guntur": "Sunny, 32°C",
+        "vijayawada": "Hot, 34°C",
+        "hyderabad": "Cloudy, 28°C",
+        "bangalore": "Rainy, 22°C",
+    }
+    return sample.get(city.lower(), "Weather unavailable for this city")
+
+
+tools = [
+    Tool(
+        name="calculator",
+        func=calculator,
+        description="Calculate math expressions like '23+45'."
+    ),
+    Tool(
+        name="weather",
+        func=weather,
+        description="Get weather of a city. Example: 'weather: hyderabad'"
+    )
+]
+
+# ------------------------
+#  AGENT SECTION
+# ------------------------
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.prompts import PromptTemplate
-from langchain.agents.react.agent import create_react_agent
 from langchain.agents import AgentExecutor
-from tools import tools
+from langchain.agents.react import create_react_agent
+from langchain_core.prompts import PromptTemplate
 
 load_dotenv()
 
 def create_agent():
-
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
+        model="gemini-2.5-flash",
         temperature=0,
-        google_api_key=os.getenv("GOOGLE_API_KEY")
+        google_api_key=os.getenv("GEMINI_API_KEY"),
     )
 
-    # ReAct System Prompt
-    prompt = PromptTemplate.from_template("""
-        You are a helpful AI agent.
-        Use tools when needed.
-        Think step-by-step.
+    # ---- REQUIRED REACT TEMPLATE ----
+    prompt = PromptTemplate(
+        input_variables=["input", "agent_scratchpad", "tools", "tool_names"],
+        template="""You are a helpful AI agent. Use tools when needed.
 
-        Question: {input}
-    """)
+Available tools:
+{tools}
 
-    # Create ReAct Agent
+Tool names: {tool_names}
+
+Question: {input}
+
+{agent_scratchpad}
+"""
+    )
+
     agent = create_react_agent(
         llm=llm,
         tools=tools,
-        prompt=prompt
+        prompt=prompt,
     )
 
-    # Wrap agent in executor
     agent_executor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=True
+        verbose=True,
+        handle_parsing_errors=True
     )
 
     return agent_executor
-# main.py
 
-from agent import create_agent
+if __name__ == "__main__":
+    agent = create_agent()
 
-agent = create_agent()
+    print("Gemini ReAct Agent Ready!")
+    print("Type 'exit' to quit\n")
 
-print("Gemini Tools-Enabled Agent is Ready!")
-print("Type 'exit' to quit.\n")
+    while True:
+        query = input("You: ")
 
-while True:
-    query = input("You: ")
+        if query.lower() == "exit":
+            break
 
-    if query.lower() == "exit":
-        break
-
-    # NEW LANGCHAIN SYNTAX
-    response = agent.invoke({"input": query})
-
-    print("Agent:", response["output"])
+        try:
+            response = agent.invoke({"input": query})
+            print("Agent:", response["output"])
+        except Exception as e:
+            print("Error:", e)
