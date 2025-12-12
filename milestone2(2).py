@@ -72,7 +72,8 @@ If no tool needed, answer normally.
 def run_agent(user_input):
     response = model.generate_content(user_input)
     first = response.candidates[0].content.parts[0]
-    
+
+    # If Gemini calls a tool
     if hasattr(first, "function_call") and first.function_call:
         fc = first.function_call
 
@@ -89,7 +90,7 @@ def run_agent(user_input):
         )
         return follow_up.text
 
-    
+    # Otherwise normal answer
     return response.text
 
 if __name__ == "__main__":
