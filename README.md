@@ -2,7 +2,6 @@
 Batch 6/7 
 Agent-Orchestration Framework with LangChain
 
-Project Description for Infosys Interns
 
 This project focuses on building a multi-agent orchestration framework using the LangChain library. The system simulates intelligent, collaborative agents capable of planning tasks, managing memory, invoking tools, and coordinating to achieve a shared objective.
 The goal is to automate moderately complex multi-step workflows using agent collaboration.
